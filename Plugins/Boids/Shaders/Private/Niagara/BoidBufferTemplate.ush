@@ -1,0 +1,30 @@
+
+StructuredBuffer<float3> {ParameterName}_InPositions;
+StructuredBuffer<float3> {ParameterName}_InVelocities;
+uint {ParameterName}_BoidCount;
+
+void GetBoidPosition_{ParameterName}(in int ID, out bool IsValid, out float3 Out_Value)
+{
+	if (ID >= {ParameterName}_BoidCount)
+	{
+		IsValid = false;
+		Out_Value = 0;
+		return;
+	}
+
+	IsValid = true;
+	Out_Value = {ParameterName}_InPositions[ID];
+}
+
+void GetBoidVelocity_{ParameterName}(in int ID, out bool IsValid, out float3 Out_Value)
+{
+	if (ID >= {ParameterName}_BoidCount)
+	{
+		IsValid = false;
+		Out_Value = 0;
+		return;
+	}
+
+	IsValid = true;
+	Out_Value = {ParameterName}_InVelocities[ID];
+}

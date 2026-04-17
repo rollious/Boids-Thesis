@@ -1,0 +1,54 @@
+#include "/Engine/Private/Common.ush"
+
+// -- Buffers --
+RWStructuredBuffer<uint> HashBuffer;
+RWStructuredBuffer<uint> BoidIndexBuffer;
+
+// Stores the start index and count of boids in each occupied cell.
+// Its size should be the number of occupied cells.
+RWStructuredBuffer<uint> CellOffsetBuffer;
+
+StructuredBuffer<float3> InPositions;
+RWStructuredBuffer<float3> OutPositions;
+
+float CellSize; /*OR*/ //float InvCellSize;
+uint BoidCount;
+// -- Functions --
+
+// CHECKED
+uint GetHash(int3 Cell) 
+{
+	uint Hash = Cell.x * 73856093 ^ Cell.y * 19349663 ^ Cell.z * 83492791;
+	return FmodFloor(Hash, BoidCount); // Needs a distance check. Keeps the hash within the BoidCount bounds.
+}
+
+// CHECKED
+int3 GetFlooredCell(float3 Position) 
+{
+	float3 Scaled = Position / CellSize;
+	return int3(floor(Scaled.x), floor(Scaled.y), floor(Scaled.z));
+}
+
+[numthreads(256, 1 , 1)] // CHECKED
+void CreateHashes(uint3 ID : SV_DispatchThreadID)
+{
+	uint Index = ID.x;
+	if (Index >= BoidCount) return;
+	
+	BoidIndexBuffer[Index] = Index; // Presorted
+	int3 Cell = GetFlooredCell(InPositions[Index]);
+	HashBuffer[Index] = GetHash(Cell);
+}
+
+[numthreads(256, 1, 1)] // CHECKED
+void CreateOffsetList(uint3 ID : SV_DispatchThreadID)
+{
+	if (ID.x >= BoidCount) return;
+	
+	uint BoidIndex = BoidIndexBuffer[ID.x]; // After sorting
+	uint Hash = HashBuffer[BoidIndex]; // Which cell the boid is in
+
+	// InterlockedMin(dest, value);
+	// Across multiple threads, this guarantees the minimum value for the index.
+	InterlockedMin(CellOffsetBuffer[Hash], ID.x);
+}

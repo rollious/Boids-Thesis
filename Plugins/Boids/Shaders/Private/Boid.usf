@@ -1,0 +1,229 @@
+#include "/Engine/Private/Common.ush"
+#include "SpatialHash.usf"
+//--------------------------------------------------------------------------------------
+// Buffers
+//--------------------------------------------------------------------------------------
+
+float AlignmentStrength;
+float CohesionStrength;
+float SeparationStrength;
+float TargetStrength;
+float PlayerAvoidanceStrength;
+
+float DeltaTime;
+float BoidSpeed;
+
+StructuredBuffer<float3> InVelocities;
+RWStructuredBuffer<float3> OutVelocities;
+
+StructuredBuffer<float3> InPlayerPositions;
+uint PlayerCount;
+
+float3 Target;
+
+float MaxDistanceFromTarget;
+float MinDistanceFromTarget;
+
+float SearchModifier;
+float SeparationDistance;
+float AvoidanceDistance;
+
+//--------------------------------------------------------------------------------------
+// Functions
+//--------------------------------------------------------------------------------------
+#pragma region Helpers
+// CHECKED
+float3 SafeNormal(float3 Vec, float3 SafeOverride = float3(0, 0, 0))
+{
+	float L = length(Vec);
+	return L > 0.0f ? Vec / L : SafeOverride;
+}
+#pragma endregion
+
+float3 CalculateAlignment(inout float3 Alignment)
+{
+	
+}
+
+float3 CalculateCohesion()
+{
+	
+}
+
+void CalculateSeparation(inout float3 Separation, in float Distance, in float3 Position, in float3 NeighbourPos)
+{
+	if (Distance <= SeparationDistance && Distance > 0.0f)
+	{
+		float3 SeparationDir = Position - NeighbourPos;
+		float Delta = SeparationDistance - Distance;
+		Separation += (SeparationDir / Distance) * Delta;
+	}
+}
+
+void CalculateTarget(in float3 Position, out float3 TargetDirection)
+{
+	float Length = distance(Target, Position);
+	if (Length > MaxDistanceFromTarget) TargetDirection = SafeNormal(Target - Position) * Length; // Steer toward target
+	else if (Length < MinDistanceFromTarget) TargetDirection = SafeNormal(Position - Target) * Length; // Steer away from target
+}
+
+void CalculatePlayerAvoidance(in float3 Position, out float3 PlayerAvoidance)
+{
+	PlayerAvoidance = float3(0,0,0);
+	for (int i = 0; i < PlayerCount; ++i)
+	{
+		float Distance = distance(InPlayerPositions[i], Position);
+		if (Distance <= AvoidanceDistance && Distance > 0.0f)
+		{
+			float3 AvoidanceDir = Position - InPlayerPositions[i];
+			float Delta = AvoidanceDistance - Distance;
+			PlayerAvoidance += (AvoidanceDir / Distance) * Delta;
+		}
+	}
+}
+
+float3 GetClampedToSize(float3 V, float Min, float Max)
+{
+	float Size = sqrt(V.x*V.x + V.y*V.y + V.z*V.z);
+	const float3 Dir = (Size > 1e-8) ? (V/Size) : float3(0,0,0);
+	Size = clamp(Size, Min, Max);
+	return Size * Dir;
+}
+
+[numthreads(256, 1 , 1)]
+void CalculateHeading(uint3 ID : SV_DispatchThreadID)
+{
+	uint Index = ID.x; // No need to use the IndexBuffer since the changes are local
+	if (Index >= BoidCount) return;
+
+	float3 ThisPosition = InPositions[Index];
+	
+	float3 Alignment = float3(0.0, 0.0, 0.0);
+	float3 Cohesion = float3(0.0, 0.0, 0.0);
+	float3 Separation = float3(0.0, 0.0, 0.0);
+
+	int NeighborCount = 0;
+	int3 ThisCell = GetFlooredCell(ThisPosition);
+	for (int i = -1; i <= 1; ++i){
+		for (int j = -1; j <= 1; ++j){
+			for (int k = -1; k <= 1; ++k)
+			{
+				int3 NextCell = ThisCell + int3(i, j, k);
+				uint CellHash = GetHash(NextCell);
+
+				uint NeighborIterator = CellOffsetBuffer[CellHash];
+				// while iterator is not null and is less than the amount of boids
+				while (NeighborIterator != 0xFFFFFFFFu && NeighborIterator < BoidCount)
+				{
+					uint NeighborIndex = BoidIndexBuffer[NeighborIterator];
+					
+					// If the neighbours hash is not the same as the cells break.
+					if (HashBuffer[NeighborIndex] != CellHash) break;
+
+					float3 NeighborPosition = InPositions[NeighborIndex];
+					float Distance = distance(NeighborPosition, ThisPosition);
+					if (Distance <= CellSize * SearchModifier && NeighborIndex != Index)
+					{
+						Cohesion += NeighborPosition;
+						Alignment += InVelocities[NeighborIndex];
+
+						CalculateSeparation(Separation, Distance, ThisPosition, NeighborPosition);
+						
+						NeighborCount++;
+					}
+					// Increments the value magically e.g. gets the next value of the buffer.
+					NeighborIterator++;
+				}
+			}
+		}
+	}
+
+	if (NeighborCount > 0)
+	{
+		Cohesion = (Cohesion / NeighborCount) - ThisPosition;
+		Alignment = (Alignment / NeighborCount) - InVelocities[Index];
+	}
+
+	float3 TargetDirection = float3(0, 0, 0);
+	CalculateTarget(ThisPosition, TargetDirection);
+
+	float3 Acceleration =
+		Alignment * AlignmentStrength
+		+ Separation * SeparationStrength
+		+ Cohesion * CohesionStrength
+		+ TargetDirection * TargetStrength;
+	
+	OutVelocities[Index] += Acceleration * DeltaTime;
+	OutVelocities[Index] = GetClampedToSize(OutVelocities[Index], BoidSpeed*.2, BoidSpeed);
+	
+	OutPositions[Index] += OutVelocities[Index] * DeltaTime;
+}
+
+[numthreads(256, 1 , 1)]
+void CalculateHeadingAvoidingPlayer(uint3 ID : SV_DispatchThreadID)
+{
+		uint Index = ID.x; // No need to use the IndexBuffer since the changes are local
+	if (Index >= BoidCount) return;
+
+	float3 ThisPosition = InPositions[Index];
+	
+	float3 Alignment = float3(0.0, 0.0, 0.0);
+	float3 Cohesion = float3(0.0, 0.0, 0.0);
+	float3 Separation = float3(0.0, 0.0, 0.0);
+
+	int NeighborCount = 0;
+	int3 ThisCell = GetFlooredCell(ThisPosition);
+	for (int i = -1; i <= 1; ++i){
+		for (int j = -1; j <= 1; ++j){
+			for (int k = -1; k <= 1; ++k)
+			{
+				int3 NextCell = ThisCell + int3(i, j, k);
+				uint CellHash = GetHash(NextCell);
+
+				uint NeighborIterator = CellOffsetBuffer[CellHash];
+				// while iterator is not null and is less than the amount of boids
+				while (NeighborIterator != 0xFFFFFFFFu && NeighborIterator < BoidCount)
+				{
+					uint NeighborIndex = BoidIndexBuffer[NeighborIterator];
+					
+					// If the neighbours hash is not the same as the cells, check next (just in case).
+					if (HashBuffer[NeighborIndex] != CellHash) { NeighborIterator++; continue; }
+
+					float3 NeighborPosition = InPositions[NeighborIndex];
+					float Distance = distance(NeighborPosition, ThisPosition);
+					if (Distance <= CellSize * SearchModifier && NeighborIndex != Index)
+					{
+						Cohesion += NeighborPosition;
+						Alignment += InVelocities[NeighborIndex];
+						CalculateSeparation(Separation, Distance, ThisPosition, NeighborPosition);
+						NeighborCount++;
+					}
+					// Increments the value magically e.g. gets the next value of the buffer.
+					NeighborIterator++;
+				}
+			}
+		}
+	}
+
+	if (NeighborCount > 0)
+	{
+		Cohesion = (Cohesion / NeighborCount) - ThisPosition;
+		Alignment = (Alignment / NeighborCount) - InVelocities[Index];
+	}
+
+	float3 TargetDirection = float3(0, 0, 0);
+	CalculateTarget(ThisPosition, TargetDirection);
+
+	float3 PlayerAvoidance = float3(0,0,0);
+	CalculatePlayerAvoidance(ThisPosition, PlayerAvoidance);
+	
+	float3 Acceleration =
+		Alignment * AlignmentStrength
+		+ Separation * SeparationStrength
+		+ Cohesion * CohesionStrength
+		+ TargetDirection * TargetStrength;
+		+ PlayerAvoidance * PlayerAvoidanceStrength;
+	
+	OutVelocities[Index] += Acceleration * DeltaTime;
+	OutVelocities[Index] = GetClampedToSize(OutVelocities[Index], BoidSpeed * 0.2f, BoidSpeed); 
+}
