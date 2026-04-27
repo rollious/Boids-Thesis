@@ -4,7 +4,7 @@
 #include "Boids/Public/GPU/Structs/GPUStructs.h"
 
 void BitonicSorter::BitonicSort(uint32 MaxCount, uint32 NumItems,
-                                FRDGBufferUAVRef ComparisonBuffer, FRDGBufferUAVRef BufferToSort, FBoidsRDGData& RDGData, FRDGBuilder& GraphBuilder)
+                                FRDGBufferUAVRef ComparisonBuffer, FRDGBufferUAVRef BufferToSort, FRDGBuilder& GraphBuilder)
 {
 	int ThreadCount = ((NumItems - 1) >> 9) + 1;
 	bool Done = true;

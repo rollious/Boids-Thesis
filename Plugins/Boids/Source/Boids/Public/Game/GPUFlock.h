@@ -9,7 +9,6 @@
 #include "GPUFlock.generated.h"
 
 class UGPUDrawComponent;
-class USplineComponent;
 
 USTRUCT()
 struct FFlockSettings
@@ -68,9 +67,9 @@ private:
 	FDoubleBuffer PositionBuffer = FDoubleBuffer();
 	FDoubleBuffer VelocityBuffer = FDoubleBuffer();
 	
-	FBoidsRDGData BoidsRDGData = FBoidsRDGData(1, 1);
+	FBoidsRDGData BoidsRDGData = FBoidsRDGData(1);
 
-	FUAVBuffer HashBuffer = FUAVBuffer();//
+	FUAVBuffer HashBuffer = FUAVBuffer();
 	FUAVBuffer BoidIndexBuffer = FUAVBuffer();
 	FUAVBuffer CellOffsetBuffer = FUAVBuffer();
 

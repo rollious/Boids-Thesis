@@ -5,6 +5,7 @@
 
 class UNiagaraSystem;
 class ABoidActor;
+
 constexpr float GOLDEN_RATIO = 1.618;
 
 static FIntVector ThreadGroupSize(const int NumElements)
@@ -58,10 +59,10 @@ public:
 	UPROPERTY(EditAnywhere, meta = (ClampMin = 0))
 	float AvoidanceDistance = 3.f;
 
-	UPROPERTY(EditAnywhere, meta = (ClampMin = 0))
+	UPROPERTY(EditAnywhere, meta = (ClampMin = 0, ToolTip = "If the distance is smaller than the minimum, the boid will move away from the target"))
 	float MinDistanceFromTarget = 200.f;
 
-	UPROPERTY(EditAnywhere, meta = (ClampMin = 0))
+	UPROPERTY(EditAnywhere, meta = (ClampMin = 0, ToolTip = "If the distance is larger than the maximum, the boid will move toward the target"))
 	float MaxDistanceFromTarget = 200.f;
 };
 
@@ -73,7 +74,7 @@ public:
 	UPROPERTY(EditAnywhere, meta = (ClampMin = 1))
 	float CellSize = 100.f;
 
-	UPROPERTY(EditAnywhere, meta = (ClampMin = 0.1, ClampMax = 3.f))
+	UPROPERTY(EditAnywhere, meta = (ClampMin = 0.1, ClampMax = 3.f, ToolTip = "Modifies the final search region. n < 1 = search radius smaller than the cell size, n > 1 = search radius bigger than the cell size, n == 3 = search the entire 3 x 3 x 3 area."))
 	float SearchModifier = 1.f;
 };
 
@@ -95,7 +96,6 @@ public:
 	TSoftObjectPtr<UNiagaraSystem> NiagaraSystem;
 };
 
-
 USTRUCT()
 struct FBoidSettings
 {
@@ -114,6 +114,7 @@ public:
 	FHashSettings Hash;
 };
 
+// Thesis test settings
 USTRUCT()
 struct FTestSettings : public FBoidSettings
 {
@@ -129,6 +130,7 @@ public:
 	FVector3f Target;
 };
 
+// CPU flock type
 UENUM()
 enum class EFlockType : uint8
 {

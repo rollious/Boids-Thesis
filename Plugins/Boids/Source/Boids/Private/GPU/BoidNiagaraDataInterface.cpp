@@ -228,7 +228,7 @@ bool UBoidNiagaraDataInterface::GetFunctionHLSL(const FNiagaraDataInterfaceGPUPa
 	return false;
 }
 
-// this loads our hlsl template script file and {WHAT?!?!?}
+// this loads our hlsl template script file
 void UBoidNiagaraDataInterface::GetParameterDefinitionHLSL(const FNiagaraDataInterfaceGPUParamInfo& ParamInfo,
 	FString& OutHLSL)
 {

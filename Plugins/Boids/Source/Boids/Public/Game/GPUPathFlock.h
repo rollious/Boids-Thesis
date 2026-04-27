@@ -6,6 +6,8 @@
 #include "GPUFlock.h"
 #include "GPUPathFlock.generated.h"
 
+class USplineComponent;
+
 USTRUCT()
 struct FPath
 {

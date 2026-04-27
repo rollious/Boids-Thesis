@@ -13,7 +13,6 @@ USpatialHash::USpatialHash()
 
 void USpatialHash::Single_UpdateGrid(TArray<FVector3f>& Positions, float CellSize)
 {
-	Grid.Reset();
 	for (int i = 0; i < Positions.Num(); i++)
 	{
 		FVector3f P = Positions[i];
@@ -23,6 +22,7 @@ void USpatialHash::Single_UpdateGrid(TArray<FVector3f>& Positions, float CellSiz
 	}
 }
 
+// TODO: Doesn't work because TMap not thread safe.
 void USpatialHash::Multi_UpdateGrid(TArray<FVector3f>& Positions, float CellSize)
 {
 	ParallelFor(Positions.Num(), [&](int32 i)
@@ -34,6 +34,7 @@ void USpatialHash::Multi_UpdateGrid(TArray<FVector3f>& Positions, float CellSize
 	});
 }
 
+// TODO: Improve querying 
 void USpatialHash::QueryNeighbors(const FVector3f& Position, TArray<uint32>& Neighbors, float CellSize)
 {
 	// GET SURROUNDING 24 CELLS AND THEIR CONTAINING BOIDS.
@@ -41,7 +42,8 @@ void USpatialHash::QueryNeighbors(const FVector3f& Position, TArray<uint32>& Nei
 	const FIntVector CenterCell = GridPosition(Position, CellSize);
 
 	// Search 3×3×3 = 27 surrounding cells
-	for (int i = 0; i < 27; i++){
+	for (int i = 0; i < 27; i++)
+	{
 		const FIntVector Neighbor = CenterCell + Offsets[i];
 		const int Hash = CreateHash(Neighbor);
 

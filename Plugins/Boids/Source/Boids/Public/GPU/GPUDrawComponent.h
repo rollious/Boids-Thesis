@@ -21,7 +21,7 @@ class BOIDS_API UGPUDrawComponent : public UActorComponent
 public:
 	UGPUDrawComponent();
 	
-	void InitGameThread(int32 BoidCount, FDoubleBuffer& PositionBuffer, FDoubleBuffer& VelocityBuffer);
+	void InitGameThread(int32 BoidCount, const FDoubleBuffer& PositionBuffer, const FDoubleBuffer& VelocityBuffer) const;
 
 	void UpdateNiagaraBuffer(FName OverrideName, uint32 BoidCount, const TRefCountPtr<FRDGPooledBuffer>& PositionBuffer, const TRefCountPtr<FRDGPooledBuffer>& DirectionBuffer) const;
 

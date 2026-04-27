@@ -44,15 +44,14 @@ void AGPUFlock::GameInit()
 
 void AGPUFlock::RenderInit()
 {
+	// Pass CPU data from the game thread into the render thread
 	ENQUEUE_RENDER_COMMAND(InitPass)([this](FRHICommandListImmediate& RHICmdList)
 	{
 		BoidsRDGData.ClearPasses();
 		BoidsRDGData.InitFence = RHICreateGPUFence(TEXT("BoidsInitFence"));
 		FRDGBuilder GraphBuilder(RHICmdList);
 
-		// Construct boids (positions and directions) in GPU
 		InitializeBuffers(GraphBuilder);
-		// INITIALIZE EVERYTHING!
 			
 		GraphBuilder.Execute();
 		RHICmdList.WriteGPUFence(BoidsRDGData.InitFence);
@@ -85,7 +84,7 @@ void AGPUFlock::RenderTick()
 		// 1. Recreate Hashes
 		RebuildHashes(GraphBuilder);
 		// 2. Sort Boids by hash
-		BitonicSorter::BitonicSort(Settings.BoidCount, Settings.BoidCount, HashBuffer.WriteScopedUAV, BoidIndexBuffer.WriteScopedUAV, BoidsRDGData, GraphBuilder);
+		BitonicSorter::BitonicSort(Settings.BoidCount, Settings.BoidCount, HashBuffer.WriteScopedUAV, BoidIndexBuffer.WriteScopedUAV, GraphBuilder);
 
 		// 3. Rebuild cell offset buffer
 		RebuildOffsetBuffer(GraphBuilder);
@@ -127,6 +126,8 @@ void AGPUFlock::InitializeBuffers(FRDGBuilder& GraphBuilder)
 		Location = FMath::VRand() * FMath::RandRange(0.f, 500.f);
 		Location += SpawnLocation;
 		Velocity = FMath::VRand() * FMath::FRandRange(-Settings.Movement.BaseSpeed, Settings.Movement.BaseSpeed);
+
+		// Initialize the values in CPU code and upload the generated data into the buffers through QueueBufferUpload
 		Positions[i] = FVector3f(Location);
 		Velocities[i] = FVector3f(Velocity);
 	}

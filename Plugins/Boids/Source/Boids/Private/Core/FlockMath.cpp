@@ -25,14 +25,12 @@ FVector3f FFlockMath::CalculateAlignment(const uint32 Index, const TArray<FVecto
 
 		Sum = VectorAdd(Sum, VectorAdd(VectorAdd(V0, V1), VectorAdd(V2, V3)));
 	}
+	
 	float Out[4]; // Number of lanes of the register.
 	VectorStoreAligned(Sum, Out);
 	AlignmentForce += FVector3f(Out[0], Out[1], Out[2]);
 	
 	for (; NeighborIndex < NeighborAmount; NeighborIndex++)	AlignmentForce += Velocities[InNeighbors[NeighborIndex]];
-
-	// const float InvCount = 1.0f / NeighborAmount;
-	// AlignmentForce *= InvCount;
     	
 	AlignmentForce /= NeighborAmount;
 	return (AlignmentForce - Velocities[Index]) * Strength;
@@ -66,8 +64,7 @@ FVector3f FFlockMath::CalculateCohesion(const uint32 Index, const TArray<FVector
 	VectorStoreAligned(Sum, Out); 
 	CohesionForce += FVector3f(Out[0], Out[1], Out[2]);
 	
-	for (; NeighborIndex < NeighborAmount; NeighborIndex++)
-		CohesionForce += Positions[InNeighbors[NeighborIndex]];
+	for (; NeighborIndex < NeighborAmount; NeighborIndex++)	CohesionForce += Positions[InNeighbors[NeighborIndex]];
 
 	CohesionForce /= NeighborAmount;
 	return (CohesionForce - Positions[Index]) * Strength;

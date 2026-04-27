@@ -9,12 +9,9 @@ public:
 	bool IsInitialized() const { return ReadPooled.IsValid() && WritePooled.IsValid(); }
 	bool IsRDGRegistered() const { return ReadScopedRef != nullptr && WriteScopedRef != nullptr; };
 
-	void SwapBuffers()
-	{
-		ReadPooled.Swap(WritePooled);
-	}
+	void SwapBuffers() { ReadPooled.Swap(WritePooled); }
 
-	void RegisterReadWrite(FRDGBuilder& GraphBuilder, const FString& ReadName, FString WriteName)
+	void RegisterReadWrite(FRDGBuilder& GraphBuilder, const FString& ReadName, const FString& WriteName)
 	{
 		RegisterSRV(GraphBuilder, ReadPooled, ReadName, ReadScopedRef, ReadScopedSRV);
 		RegisterUAV(GraphBuilder, WritePooled, WriteName, WriteScopedRef, WriteScopedUAV);
@@ -129,21 +126,18 @@ public:
 	FBoidsRDGData()
 	{
 		InitPass.SetNum(0);
-		ExecutePass.SetNum(0);
 		InitFence = nullptr;
 	}
 
-	FBoidsRDGData(const int32 InitPassSize, const int32 ExecutePassSize)
+	explicit FBoidsRDGData(const int32 InitPassSize)
 	{
 		InitPass.SetNum(InitPassSize);
-		ExecutePass.SetNum(ExecutePassSize);
 		InitFence = nullptr;
 	}
 
 	void ClearPasses()
 	{
-		for (FRDGPassRef& Pass : InitPass) Pass = nullptr; // simple for loop instead?
-		for (FRDGPassRef& Pass : ExecutePass) Pass = nullptr;
+		for (FRDGPassRef& Pass : InitPass) Pass = nullptr;
 	}
 
 	void DisposeFence()
@@ -153,27 +147,9 @@ public:
 		InitFence = nullptr;
 	}
 
-	void CheckPass()
-	{
-		GEngine->AddOnScreenDebugMessage(-1, -1, FColor::Green, FString::Printf(TEXT("%d"), TruePassIndex));
-		TruePassIndex = 0;
-	}
-
-	void AddExecutePass(const FRDGPassRef Pass)
-	{
-		ExecutePass[PassIndex] = Pass;
-		const int NextIndex = PassIndex + 1;
-		PassIndex = NextIndex < ExecutePass.Num() ? NextIndex : 0;
-		TruePassIndex++;
-	}
-
 	bool WaitingOnFence() const { return (!InitFence.IsValid() || !InitFence->Poll()); }
 	
 public:
 	TArray<FRDGPassRef> InitPass;
-	TArray<FRDGPassRef> ExecutePass;
 	FGPUFenceRHIRef InitFence;
-private:
-	int PassIndex = 0;
-	int TruePassIndex = 0; // for debug checking 
 };

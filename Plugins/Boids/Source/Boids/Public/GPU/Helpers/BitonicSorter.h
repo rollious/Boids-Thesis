@@ -6,7 +6,7 @@ class BitonicSorter
 {
 public:
 	static void BitonicSort(uint32 MaxCount, uint32 NumItems, FRDGBufferUAVRef ComparisonBuffer, FRDGBufferUAVRef BufferToSort,
-			 FBoidsRDGData& RDGData, FRDGBuilder& GraphBuilder);
+	                        FRDGBuilder& GraphBuilder);
 private:
 	static void Sort(uint32 MaxCount, uint32 NumItems, FRDGBufferUAVRef ComparisonBuffer, FRDGBufferUAVRef BufferToSort,
 					 FRDGBuilder& GraphBuilder, int ThreadCount, bool& Done);

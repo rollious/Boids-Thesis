@@ -4,7 +4,6 @@
 #include "Game/GPUPathFlock.h"
 #include "Components/SplineComponent.h"
 
-
 // Sets default values
 AGPUPathFlock::AGPUPathFlock()
 {
